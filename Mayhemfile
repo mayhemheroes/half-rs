@@ -1,0 +1,6 @@
+project: half-rs
+target: half-fuzz
+
+cmds:
+    - cmd: ./half-fuzz
+      libfuzzer: true
