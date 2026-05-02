@@ -23,66 +23,56 @@ jobs:
   rust:
     name: Rust
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.rust == 'nightly' }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        target: [x86_64, i686, aarch64]
         rust:
           - stable
           - beta
           - nightly
-          - 1.81.0
+          - 1.58.1
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6.0.2
 
-    - name: Linux Install Rust toolchain
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      uses: dtolnay/rust-toolchain@master
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
       with:
+        profile: minimal
         toolchain: ${{ matrix.rust }}
-        targets: ${{ matrix.target }}-unknown-linux-gnu
-        components: clippy,rustfmt
-
-    - name: Windows Install Rust toolchain
-      if: ${{ matrix.os == 'windows-latest' }}
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        targets: ${{ matrix.target }}-pc-windows-msvc
+        override: true
         components: clippy,rustfmt
 
     - name: Cache Dependencies
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@v1
 
     - name: Install Cargo Make
-      if: ${{ matrix.target == 'x86_64' }}
       uses: davidB/rust-cargo-make@v1
 
-    - run: cargo make ci-flow
-      if: ${{ matrix.target == 'x86_64' }}
-
-    - name: linux cargo-make build-only
-      if: ${{ matrix.target != 'x86_64' && matrix.os == 'ubuntu-latest' }}
-      run: cargo build --all-features --target ${{ matrix.target }}-unknown-linux-gnu
-
-    - name: windows cargo-make build-only
-      if: ${{ matrix.target != 'x86_64' && matrix.os == 'windows-latest' }}
-      run: cargo build --all-features --target ${{ matrix.target }}-pc-windows-msvc
+    - name: cargo-make ci-flow
+      uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args: ci-flow
 
   miri:
     name: Miri
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: nightly
+          override: true
           components: miri
-      - run: cargo miri test
+      - name: Run Miri
+        uses: actions-rs/cargo@v1
+        with:
+          command: miri
+          args: test
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
